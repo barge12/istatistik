@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>İstatistik Sistemi</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block head %}{% endblock %}
+</head>
+
+<body>
+    {% if current_user.is_authenticated %}
+    <nav class="glass-panel navbar">
+        <div class="flex items-center gap-4">
+
+            <!-- ☰ ÜÇ NOKTA MENÜ BUTONU (EN SOLDA) -->
+            <div class="menu-dropdown">
+                <button class="menu-btn" id="menuToggleBtn" title="Menüyü Aç/Kapat">&#8942;</button>
+
+                <div class="menu-content" id="menuDropdown">
+                    <a href="{{ url_for('dashboard') }}"
+                        class="{% if request.endpoint == 'dashboard' %}menu-active{% endif %}">
+                        🏠 Anasayfa
+                    </a>
+
+                    {% if current_user.role in ['admin', 'rootadmin'] %}
+                    <a href="{{ url_for('dashboard') }}">
+                        📊 Veriler
+                    </a>
+                    <a href="{{ url_for('statistics') }}"
+                        class="{% if request.endpoint == 'statistics' %}menu-active{% endif %}">
+                        📈 İstatistikler
+                    </a>
+                    {% endif %}
+
+                    {% if current_user.role == 'rootadmin' %}
+                    <a href="{{ url_for('units') }}" class="{% if request.endpoint == 'units' %}menu-active{% endif %}">
+                        🏢 Birimler
+                    </a>
+                    <a href="{{ url_for('users') }}" class="{% if request.endpoint == 'users' %}menu-active{% endif %}">
+                        👥 Kullanıcılar
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="logo">
+                <h2>İstatistik Sistemi</h2>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <span style="color: var(--primary); font-weight: 500;">
+                {{ current_user.username }}
+                <span style="font-size: 0.8rem; opacity: 0.8; text-transform: uppercase;">({{ current_user.role
+                    }})</span>
+            </span>
+            <a href="{{ url_for('logout') }}" class="glass-btn glass-btn-danger"
+                style="padding: 6px 12px; font-size: 0.85rem;">Çıkış Yap</a>
+        </div>
+    </nav>
+    {% endif %}
+
+    <main class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">
+            {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    {% block scripts %}{% endblock %}
+
+    <!-- MENÜ SCRIPT (her sayfada çalışır) -->
+    <script>
+        const menuBtn = document.getElementById('menuToggleBtn');
+        const menuDropdown = document.getElementById('menuDropdown');
+
+        if (menuBtn && menuDropdown) {
+            // ⋮ butonuna tıklayınca menüyü aç/kapat
+            menuBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                menuDropdown.classList.toggle('show');
+                menuBtn.classList.toggle('open');
+            });
+
+            // Menü dışına tıklanınca kapat
+            document.addEventListener('click', function (e) {
+                if (!e.target.closest('.menu-dropdown')) {
+                    menuDropdown.classList.remove('show');
+                    menuBtn.classList.remove('open');
+                }
+            });
+
+            // ESC tuşu ile kapat
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') {
+                    menuDropdown.classList.remove('show');
+                    menuBtn.classList.remove('open');
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>

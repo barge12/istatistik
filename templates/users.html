@@ -1,0 +1,373 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex-col gap-4">
+
+    <!-- 1. KULLANICI LİSTESİ TABLOSU -->
+    <div class="glass-panel" style="padding: 2rem;">
+        <div class="flex items-center justify-between" style="margin-bottom: 1.5rem;">
+            <h3>Sistem Kullanıcıları</h3>
+            <!-- ✅ YENİ KULLANICI EKLE BUTONU (formu açar/kapatır) -->
+            <button class="glass-btn" id="toggleAddUserBtn" style="font-weight: 600;">+ Kullanıcı Ekle</button>
+        </div>
+        <div class="glass-table-container">
+            <table class="glass-table">
+                <thead>
+                    <tr>
+                        <th>Kullanıcı Adı</th>
+                        <th>E-posta</th>
+                        <th>Rol</th>
+                        <th>Birim</th>
+                        <th>Alt Birim</th>
+                        <th>Durum</th>
+                        <th style="width: 100px;">İşlem</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr>
+                        <td>{{ u.username }}</td>
+                        <td>{{ u.email or '-' }}</td>
+                        <td><span
+                                style="padding: 4px 8px; border-radius: 4px; background: rgba(59,130,246,0.2); font-size: 0.8rem;">{{
+                                u.role }}</span></td>
+                        <td>{{ u.unit_name or '-' }}</td>
+                        <td>{{ u.sub_unit_name or '-' }}</td>
+                        <td>
+                            {% if u.is_active %}
+                            <span style="color: var(--success); font-weight: 500;">Aktif</span>
+                            {% else %}
+                            <span style="color: var(--danger); font-weight: 500;">Pasif</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button class="glass-btn edit-user-btn" style="padding: 4px 10px; font-size: 0.8rem;"
+                                data-id="{{ u.id }}" data-username="{{ u.username }}" data-email="{{ u.email or '' }}"
+                                data-role="{{ u.role }}" data-unit="{{ u.unit_id or '' }}"
+                                data-subunit="{{ u.sub_unit_id or '' }}" data-subunit-name="{{ u.sub_unit_name or '' }}"
+                                data-active="{{ 1 if u.is_active else 0 }}">
+                                Düzenle
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: var(--text-muted);">Kayıtlı kullanıcı yok.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 2. YENİ KULLANICI EKLE FORMU (varsayılan GİZLİ, butonla açılır) -->
+    <div class="glass-panel" id="addUserPanel" style="padding: 2rem; margin-top: 1rem; display: none;">
+        <div class="flex items-center justify-between" style="margin-bottom: 1.5rem;">
+            <h3>Yeni Kullanıcı Ekle</h3>
+            <button class="glass-btn glass-btn-danger" id="closeAddUserBtn"
+                style="padding: 4px 12px; font-size: 0.85rem;">✕ İptal</button>
+        </div>
+
+        <form method="POST" action="{{ url_for('users') }}" class="flex-col gap-4">
+
+            <div class="flex gap-4">
+                <div class="flex-col gap-2" style="flex: 1;">
+                    <label for="username" style="font-size: 0.9rem; color: var(--text-muted);">Kullanıcı Adı <span
+                            style="color:var(--danger)">*</span> (Min 6 kar.)</label>
+                    <input type="text" id="username" name="username" class="glass-input" required minlength="6"
+                        autocomplete="off" placeholder="Kullanıcı adı">
+                </div>
+                <div class="flex-col gap-2" style="flex: 1;">
+                    <label for="password" style="font-size: 0.9rem; color: var(--text-muted);">Şifre <span
+                            style="color:var(--danger)">*</span> (Min 6 kar.)</label>
+                    <input type="password" id="password" name="password" class="glass-input" required minlength="6"
+                        placeholder="******">
+                </div>
+            </div>
+
+            <div class="flex gap-4">
+                <div class="flex-col gap-2" style="flex: 1;">
+                    <label for="email" style="font-size: 0.9rem; color: var(--text-muted);">E-posta</label>
+                    <input type="email" id="email" name="email" class="glass-input" autocomplete="off"
+                        placeholder="eposta@ornek.com">
+                </div>
+                <div class="flex-col gap-2" style="flex: 1;">
+                    <label for="role" style="font-size: 0.9rem; color: var(--text-muted);">Rol</label>
+                    <select id="role" name="role" class="glass-input">
+                        <option value="user" style="color:#000">User</option>
+                        <option value="admin" style="color:#000">Admin</option>
+                        <option value="rootadmin" style="color:#000">Root Admin</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex gap-4">
+                <div class="flex-col gap-2" style="flex: 1;">
+                    <label for="unit_id" style="font-size: 0.9rem; color: var(--text-muted);">Birim</label>
+                    <!-- Sadece aktif birimler listelenir -->
+                    <select id="unit_id" name="unit_id" class="glass-input">
+                        <option value="" style="color:#000">-- Birim Seçin --</option>
+                        {% for un in units %}
+                        {% if un.is_active %}
+                        <option value="{{ un.id }}" style="color:#000">{{ un.name }} ({{ un.code }})</option>
+                        {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="flex-col gap-2" style="flex: 1;">
+                    <label for="sub_unit_id" style="font-size: 0.9rem; color: var(--text-muted);">Alt Birim</label>
+                    <select id="sub_unit_id" name="sub_unit_id" class="glass-input" disabled>
+                        <option value="" style="color:#000">-- Önce Birim Seçin --</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex justify-center mt-4">
+                <button type="submit" class="glass-btn" style="min-width: 160px;">Kullanıcı Ekle</button>
+            </div>
+        </form>
+    </div>
+
+</div>
+
+<!-- 3. KULLANICI DÜZENLEME MODALI -->
+<div class="modal-overlay" id="editModalOverlay">
+    <div class="glass-panel modal-content">
+        <button class="modal-close" id="closeModalBtn">&times;</button>
+        <h3 style="margin-bottom: 1.5rem;">Kullanıcı Bilgilerini Düzenle</h3>
+
+        <form id="editUserForm" method="POST" action="" class="flex-col gap-4">
+
+            <div class="flex gap-4">
+                <div class="flex-col gap-2" style="flex: 1;">
+                    <label for="edit_username" style="font-size: 0.9rem; color: var(--text-muted);">Kullanıcı Adı <span
+                            style="color:var(--danger)">*</span></label>
+                    <input type="text" id="edit_username" name="username" class="glass-input" required minlength="6">
+                </div>
+                <div class="flex-col gap-2" style="flex: 1;">
+                    <label for="edit_password" style="font-size: 0.9rem; color: var(--text-muted);">Yeni Şifre (Boş
+                        bırakılabilir)</label>
+                    <input type="password" id="edit_password" name="password" class="glass-input"
+                        placeholder="Değiştirmemek için boş bırakın">
+                </div>
+            </div>
+
+            <div class="flex gap-4">
+                <div class="flex-col gap-2" style="flex: 1;">
+                    <label for="edit_email" style="font-size: 0.9rem; color: var(--text-muted);">E-posta</label>
+                    <input type="email" id="edit_email" name="email" class="glass-input">
+                </div>
+                <div class="flex-col gap-2" style="flex: 1;">
+                    <label for="edit_role" style="font-size: 0.9rem; color: var(--text-muted);">Rol</label>
+                    <select id="edit_role" name="role" class="glass-input">
+                        <option value="user" style="color:#000">User</option>
+                        <option value="admin" style="color:#000">Admin</option>
+                        <option value="rootadmin" style="color:#000">Root Admin</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex gap-4">
+                <div class="flex-col gap-2" style="flex: 1;">
+                    <label for="edit_unit_id" style="font-size: 0.9rem; color: var(--text-muted);">Birim</label>
+                    <!-- Pasif birimler kilitli; kullanıcının mevcut birimi JS ile seçilir -->
+                    <select id="edit_unit_id" name="unit_id" class="glass-input">
+                        <option value="" style="color:#000">-- Birim Seçin --</option>
+                        {% for un in units %}
+                        <option value="{{ un.id }}" style="color:#000" {% if not un.is_active %}disabled
+                            data-passive="true" {% endif %}>
+                            {{ un.name }} ({{ un.code }}){% if not un.is_active %} — Pasif{% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="flex-col gap-2" style="flex: 1;">
+                    <label for="edit_sub_unit_id" style="font-size: 0.9rem; color: var(--text-muted);">Alt Birim</label>
+                    <select id="edit_sub_unit_id" name="sub_unit_id" class="glass-input" disabled>
+                        <option value="" style="color:#000">-- Önce Birim Seçin --</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- AKTİF / PASİF TOGGLE SLIDER -->
+            <div class="flex-col gap-2 mt-4">
+                <label style="font-size: 0.9rem; color: var(--text-muted);">Kullanıcı Durumu (Aktif / Pasif)</label>
+                <div class="toggle-container">
+                    <label class="switch">
+                        <input type="checkbox" id="edit_is_active" name="is_active">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="toggle-label" id="editStatusLabel" style="color: var(--success);">Aktif</span>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center mt-4">
+                <button type="button" class="glass-btn glass-btn-danger" id="cancelModalBtn">İptal</button>
+                <button type="submit" class="glass-btn">Bilgileri Güncelle</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // ========== YENİ KULLANICI EKLE FORMU: AÇ / KAPAT ==========
+    // ========== YENİ KULLANICI EKLE FORMU: AÇ / KAPAT ==========
+    const addPanel = document.getElementById('addUserPanel');
+    const toggleAddBtn = document.getElementById('toggleAddUserBtn');
+    const closeAddBtn = document.getElementById('closeAddUserBtn');
+
+    function openAddPanel() {
+        addPanel.style.display = 'block';
+        toggleAddBtn.textContent = '− Formu Kapat';
+        addPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function closeAddPanel() {
+        addPanel.style.display = 'none';
+        toggleAddBtn.textContent = '+ Kullanıcı Ekle';
+    }
+
+    toggleAddBtn.addEventListener('click', function () {
+        if (addPanel.style.display === 'none') {
+            openAddPanel();
+        } else {
+            closeAddPanel();
+        }
+    });
+
+    closeAddBtn.addEventListener('click', closeAddPanel);
+
+    // ========== PASİF BİRİM KİLİDİ ==========
+    function prepareUnitSelect(selectEl, selectedUnitId) {
+        selectEl.querySelectorAll('option[data-passive]').forEach(o => o.disabled = true);
+        if (selectedUnitId) {
+            let opt = selectEl.querySelector('option[value="' + selectedUnitId + '"]');
+            if (opt) {
+                opt.disabled = false;
+                selectEl.value = selectedUnitId;
+            } else {
+                selectEl.value = '';
+            }
+        } else {
+            selectEl.value = '';
+        }
+    }
+
+    // ========== ALT BİRİM GETİRME (sadece aktifler) ==========
+    function bindSubUnitsFetch(unitSelectEl, subUnitSelectEl, selectedSubId = null, selectedSubName = '') {
+        let unitId = unitSelectEl.value;
+        subUnitSelectEl.innerHTML = '<option value="" style="color:#000">-- Yükleniyor... --</option>';
+        subUnitSelectEl.disabled = true;
+
+        if (!unitId) {
+            subUnitSelectEl.innerHTML = '<option value="" style="color:#000">-- Önce Birim Seçin --</option>';
+            return;
+        }
+
+        fetch('/get_sub_units/' + unitId)
+            .then(response => response.json())
+            .then(data => {
+                subUnitSelectEl.innerHTML = '<option value="" style="color:#000">-- Alt Birim Seçin --</option>';
+                let found = false;
+                data.forEach(sub => {
+                    let opt = document.createElement('option');
+                    opt.value = sub.id;
+                    opt.textContent = sub.name + ' (' + sub.code + ')';
+                    opt.style.color = '#000';
+                    if (selectedSubId && sub.id == selectedSubId) {
+                        opt.selected = true;
+                        found = true;
+                    }
+                    subUnitSelectEl.appendChild(opt);
+                });
+                // Mevcut alt birim pasifse atamayı korumak için ekle
+                if (selectedSubId && !found) {
+                    let opt = document.createElement('option');
+                    opt.value = selectedSubId;
+                    opt.textContent = (selectedSubName || 'Mevcut alt birim') + ' — Pasif';
+                    opt.style.color = '#000';
+                    opt.selected = true;
+                    subUnitSelectEl.appendChild(opt);
+                }
+                subUnitSelectEl.disabled = false;
+            })
+            .catch(err => {
+                console.error(err);
+                subUnitSelectEl.innerHTML = '<option value="" style="color:#000">Alt birimler yüklenemedi</option>';
+            });
+    }
+
+    // Yeni kullanıcı formu — alt birim yükleme
+    let unitSelect = document.getElementById('unit_id');
+    let subUnitSelect = document.getElementById('sub_unit_id');
+    if (unitSelect) {
+        unitSelect.addEventListener('change', function () {
+            bindSubUnitsFetch(unitSelect, subUnitSelect);
+        });
+    }
+
+    // ========== DÜZENLEME MODALI ==========
+    let editModalOverlay = document.getElementById('editModalOverlay');
+    let editForm = document.getElementById('editUserForm');
+    let editUnitSelect = document.getElementById('edit_unit_id');
+    let editSubUnitSelect = document.getElementById('edit_sub_unit_id');
+    let editToggleInput = document.getElementById('edit_is_active');
+    let editStatusLabel = document.getElementById('editStatusLabel');
+
+    editUnitSelect.addEventListener('change', function () {
+        editUnitSelect.querySelectorAll('option[data-passive]').forEach(o => o.disabled = true);
+        bindSubUnitsFetch(editUnitSelect, editSubUnitSelect);
+    });
+
+    editToggleInput.addEventListener('change', function () {
+        if (this.checked) {
+            editStatusLabel.textContent = 'Aktif';
+            editStatusLabel.style.color = 'var(--success)';
+        } else {
+            editStatusLabel.textContent = 'Pasif';
+            editStatusLabel.style.color = 'var(--danger)';
+        }
+    });
+
+    document.querySelectorAll('.edit-user-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            let userId = this.dataset.id;
+            let unitId = this.dataset.unit;
+            let subUnitId = this.dataset.subunit;
+            let subUnitName = this.dataset.subunitName;
+            let isActive = this.dataset.active == "1";
+
+            editForm.action = '/users/edit/' + userId;
+            document.getElementById('edit_username').value = this.dataset.username;
+            document.getElementById('edit_password').value = '';
+            document.getElementById('edit_email').value = this.dataset.email;
+            document.getElementById('edit_role').value = this.dataset.role;
+
+            editToggleInput.checked = isActive;
+            editToggleInput.dispatchEvent(new Event('change'));
+
+            prepareUnitSelect(editUnitSelect, unitId);
+
+            if (unitId) {
+                bindSubUnitsFetch(editUnitSelect, editSubUnitSelect, subUnitId, subUnitName);
+            } else {
+                editSubUnitSelect.innerHTML = '<option value="" style="color:#000">-- Önce Birim Seçin --</option>';
+                editSubUnitSelect.disabled = true;
+            }
+
+            editModalOverlay.classList.add('active');
+        });
+    });
+
+    document.getElementById('closeModalBtn').addEventListener('click', () => editModalOverlay.classList.remove('active'));
+    document.getElementById('cancelModalBtn').addEventListener('click', () => editModalOverlay.classList.remove('active'));
+    editModalOverlay.addEventListener('click', (e) => {
+        if (e.target === editModalOverlay) editModalOverlay.classList.remove('active');
+    });
+</script>
+{% endblock %}

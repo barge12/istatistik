@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex-col gap-4">
+
+    <!-- 1. GÖNDERİLEN VERİLER TABLOSU (ÜSTTE) -->
+    <div class="glass-panel" style="padding: 2rem;">
+        <div class="flex items-center justify-between" style="margin-bottom: 1.5rem;">
+            <h3>Gönderilen Veriler</h3>
+            <div class="flex gap-4">
+                <input type="text" id="searchInput" class="glass-input" placeholder="Tabloda ara..."
+                    style="width: 250px; padding: 8px 12px;">
+                {% if current_user.role in ['admin', 'rootadmin'] %}
+                <button class="glass-btn" id="downloadSelectedBtn">Seçilenleri İndir</button>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="glass-table-container">
+            <table class="glass-table" id="dataTable">
+                <thead>
+                    <tr>
+                        {% if current_user.role in ['admin', 'rootadmin'] %}
+                        <th style="width: 40px;"><input type="checkbox" id="selectAll"></th>
+                        {% endif %}
+                        <th>Kullanıcı</th>
+                        <th>Tarih / Saat</th>
+                        <th>Birim</th>
+                        <th>Alt Birim</th>
+                        <th>Veri Başlığı</th>
+                        <th>Not</th>
+
+                        <th>Dosya</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in data %}
+                    <tr>
+                        {% if current_user.role in ['admin', 'rootadmin'] %}
+                        <td>
+                            {% if d.file_path %}
+                            <input type="checkbox" class="row-checkbox"
+                                data-file="{{ url_for('download_file', data_id=d.id) }}">
+                            {% endif %}
+                        </td>
+                        {% endif %}
+                        <td>{{ d.user }}</td>
+                        <td>{{ d.day }}/{{ d.month }}/{{ d.year }} {{ d.time }}</td>
+                        <td>{{ d.unit or '-' }}</td>
+                        <td>{{ d.sub_unit or '-' }}</td>
+                        <td>{{ d.title }}</td>
+                        <td>{{ d.note or '-' }}</td>
+                        <!--   <td>
+                            {% if d.status == 'indirildi' %}
+                            <span class="status-badge status-indirildi">İndirildi</span>
+                            {% else %}
+                            <span class="status-badge status-beklemede">Beklemede</span>
+                            {% endif %}
+                        </td>-->
+                        <td>
+                            {% if d.file_path %}
+                            <a href="{{ url_for('download_file', data_id=d.id) }}" class="glass-btn"
+                                style="padding: 4px 10px; font-size: 0.8rem; text-decoration: none;">İndir</a>
+                            {% else %}
+                            <span style="color: var(--text-muted)">Yok</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="{% if current_user.role in ['admin', 'rootadmin'] %}9{% else %}8{% endif %}"
+                            style="text-align: center; color: var(--text-muted);">Henüz kayıtlı veri bulunmuyor.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 2. VERİ GÖNDER FORMU (USER ROLÜ İÇİN ALTTA) -->
+    {% if current_user.role == 'user' %}
+    <div class="glass-panel" style="padding: 2rem; margin-top: 1rem;">
+        <h3 style="margin-bottom: 1.5rem;">Veri Gönder</h3>
+        <form method="POST" action="{{ url_for('upload') }}" enctype="multipart/form-data" class="flex-col gap-4">
+
+            <div class="flex-col gap-2">
+                <label for="title" style="font-size: 0.9rem; color: var(--text-muted);">
+                    Veri Başlığı <span style="color:var(--danger)">*</span> (En az 6 karakter)
+                </label>
+                <input type="text" id="title" name="title" class="glass-input" minlength="6" required autocomplete="off"
+                    placeholder="Veri başlığını giriniz...">
+            </div>
+
+            <div class="flex-col gap-2">
+                <label for="note" style="font-size: 0.9rem; color: var(--text-muted);">Not</label>
+                <textarea id="note" name="note" class="glass-input" rows="3"
+                    placeholder="Eklemek istediğiniz notlar..."></textarea>
+            </div>
+
+            <div class="flex gap-4">
+                <div class="flex-col gap-2" style="flex: 1;">
+                    <label style="font-size: 0.9rem; color: var(--text-muted);">Tarih & Saat</label>
+                    <input type="text" class="glass-input" value="Sistem Tarafından Otomatik Eklenir" disabled
+                        style="opacity: 0.7; cursor: not-allowed;">
+                </div>
+            </div>
+
+            <div class="flex-col gap-2">
+                <label for="file" style="font-size: 0.9rem; color: var(--text-muted);">Veri Dosyası (ZIP vb.)</label>
+                <input type="file" id="file" name="file" class="glass-input" accept=".zip,.rar,.pdf,.csv,.xlsx">
+            </div>
+
+            <button type="submit" class="glass-btn mt-4" style="width: max-content;">Veri Gönder</button>
+        </form>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Tablo arama scripti
+    document.getElementById('searchInput').addEventListener('keyup', function () {
+        let filter = this.value.toLowerCase();
+        let rows = document.querySelectorAll('#dataTable tbody tr');
+
+        rows.forEach(row => {
+            let text = row.innerText.toLowerCase();
+            if (text.includes(filter)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+
+    {% if current_user.role in ['admin', 'rootadmin'] %}
+    // Select All
+    let selectAllBtn = document.getElementById('selectAll');
+    if (selectAllBtn) {
+        selectAllBtn.addEventListener('change', function () {
+            let checkboxes = document.querySelectorAll('.row-checkbox');
+            for (let checkbox of checkboxes) {
+                checkbox.checked = this.checked;
+            }
+        });
+    }
+
+    // Download Selected Files (indirme route'u üzerinden → durum otomatik güncellenir)
+    let downloadBtn = document.getElementById('downloadSelectedBtn');
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', function () {
+            let checkboxes = document.querySelectorAll('.row-checkbox:checked');
+            if (checkboxes.length === 0) {
+                alert('Lütfen indirmek için en az bir dosya seçin.');
+                return;
+            }
+
+            checkboxes.forEach((cb, index) => {
+                setTimeout(() => {
+                    let a = document.createElement('a');
+                    a.href = cb.dataset.file;
+                    a.download = '';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                }, index * 400);
+            });
+
+            setTimeout(() => location.reload(), (checkboxes.length * 400) + 1000);
+        });
+    }
+    {% endif %}
+</script>
+{% endblock %}

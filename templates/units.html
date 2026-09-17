@@ -1,0 +1,485 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex-col gap-4">
+
+    <!-- ═══════════ PANEL 1: ENSTİTÜLER → BİRİMLERİ ═══════════ -->
+    <div class="glass-panel" style="padding: 2rem;">
+        <div class="flex items-center justify-between" style="margin-bottom: 1.5rem;">
+            <h3>🏛️ Enstitüler ve Birimleri</h3>
+            <div class="flex gap-4">
+                <button class="glass-btn" id="openAddInstituteBtn">+ Enstitü Ekle</button>
+                <button class="glass-btn" id="openAddUnitBtn">+ Birim Ekle</button>
+            </div>
+        </div>
+
+        <ul class="tree-view">
+            {% for inst in institutes_tree %}
+            <li>
+                <div class="tree-unit">
+                    <span>🏛️ {{ inst.name }}</span>
+                    <span style="display: flex; align-items: center; gap: 8px;">
+                        <span
+                            style="font-size: 0.8rem; background: rgba(168,85,247,0.25); color: #c084fc; padding: 2px 8px; border-radius: 4px; font-weight: 500;">
+                            {{ inst.code }}
+                        </span>
+                        {% if inst.is_active %}
+                        <span style="font-size: 0.75rem; font-weight: 600; color: var(--success);">● Aktif</span>
+                        {% else %}
+                        <span style="font-size: 0.75rem; font-weight: 600; color: var(--danger);">● Pasif</span>
+                        {% endif %}
+                        <button type="button" class="glass-btn edit-institute-btn"
+                            style="padding: 4px 10px; font-size: 0.8rem;" data-id="{{ inst.id }}"
+                            data-code="{{ inst.code }}" data-name="{{ inst.name }}"
+                            data-active="{{ 1 if inst.is_active else 0 }}">
+                            ✏️ Düzenle
+                        </button>
+                    </span>
+                </div>
+
+                {% if inst.units %}
+                <ul class="tree-sub-list">
+                    {% for u in inst.units %}
+                    <li class="tree-sub-item">
+                        <span>└─ 🏢 {{ u.name }}</span>
+                        <span style="display: flex; align-items: center; gap: 8px;">
+                            <span
+                                style="font-size: 0.75rem; background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 4px;">{{
+                                u.code }}</span>
+                            {% if u.is_active %}
+                            <span style="font-size: 0.75rem; font-weight: 600; color: var(--success);">● Aktif</span>
+                            {% else %}
+                            <span style="font-size: 0.75rem; font-weight: 600; color: var(--danger);">● Pasif</span>
+                            {% endif %}
+                            <button type="button" class="glass-btn edit-unit-btn"
+                                style="padding: 4px 10px; font-size: 0.8rem;" data-id="{{ u.id }}"
+                                data-code="{{ u.code }}" data-name="{{ u.name }}"
+                                data-institute="{{ u.institute_id or '' }}" data-active="{{ 1 if u.is_active else 0 }}">
+                                ✏️ Düzenle
+                            </button>
+                        </span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <ul class="tree-sub-list">
+                    <li style="font-size: 0.8rem; color: var(--text-muted); padding-left: 1rem; margin-top: 4px;">
+                        <em>(Henüz birim eklenmedi)</em>
+                    </li>
+                </ul>
+                {% endif %}
+            </li>
+            {% else %}
+            <p style="color: var(--text-muted);">Sistemde kayıtlı enstitü bulunmuyor.</p>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <!-- ═══════════ PANEL 2: BİRİMLER → ALT BİRİMLERİ ═══════════ -->
+    <div class="glass-panel" style="padding: 2rem;">
+        <div class="flex items-center justify-between" style="margin-bottom: 1.5rem;">
+            <h3>🏢 Birimler ve Alt Birimleri</h3>
+            <button class="glass-btn" id="openAddSubUnitBtn">+ Alt Birim Ekle</button>
+        </div>
+
+        <ul class="tree-view">
+            {% for item in units_tree %}
+            <li>
+                <div class="tree-unit">
+                    <span>🏢 {{ item.name }}</span>
+                    <span style="display: flex; align-items: center; gap: 8px;">
+                        <span
+                            style="font-size: 0.8rem; background: rgba(59,130,246,0.2); color: var(--primary); padding: 2px 8px; border-radius: 4px; font-weight: 500;">
+                            {{ item.code }}
+                        </span>
+                        {% if item.is_active %}
+                        <span style="font-size: 0.75rem; font-weight: 600; color: var(--success);">● Aktif</span>
+                        {% else %}
+                        <span style="font-size: 0.75rem; font-weight: 600; color: var(--danger);">● Pasif</span>
+                        {% endif %}
+                        <button type="button" class="glass-btn edit-unit-btn"
+                            style="padding: 4px 10px; font-size: 0.8rem;" data-id="{{ item.id }}"
+                            data-code="{{ item.code }}" data-name="{{ item.name }}"
+                            data-institute="{{ item.institute_id or '' }}"
+                            data-active="{{ 1 if item.is_active else 0 }}">
+                            ✏️ Düzenle
+                        </button>
+                    </span>
+                </div>
+
+                {% if item.sub_units %}
+                <ul class="tree-sub-list">
+                    {% for sub in item.sub_units %}
+                    <li class="tree-sub-item">
+                        <span>└─ 📁 {{ sub.name }}</span>
+                        <span style="display: flex; align-items: center; gap: 8px;">
+                            <span
+                                style="font-size: 0.75rem; background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 4px;">{{
+                                sub.code }}</span>
+                            {% if sub.is_active %}
+                            <span style="font-size: 0.75rem; font-weight: 600; color: var(--success);">● Aktif</span>
+                            {% else %}
+                            <span style="font-size: 0.75rem; font-weight: 600; color: var(--danger);">● Pasif</span>
+                            {% endif %}
+                            <button type="button" class="glass-btn edit-sub-unit-btn"
+                                style="padding: 4px 10px; font-size: 0.8rem;" data-id="{{ sub.id }}"
+                                data-code="{{ sub.code }}" data-name="{{ sub.name }}" data-unit="{{ item.id }}"
+                                data-active="{{ 1 if sub.is_active else 0 }}">
+                                ✏️ Düzenle
+                            </button>
+                        </span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <ul class="tree-sub-list">
+                    <li style="font-size: 0.8rem; color: var(--text-muted); padding-left: 1rem; margin-top: 4px;">
+                        <em>(Henüz alt birim eklenmedi)</em>
+                    </li>
+                </ul>
+                {% endif %}
+            </li>
+            {% else %}
+            <p style="color: var(--text-muted);">Sistemde kayıtlı birim bulunmuyor.</p>
+            {% endfor %}
+        </ul>
+    </div>
+
+</div>
+
+<!-- ═══════ POPUP 1: ENSTİTÜ EKLE ═══════ -->
+<div class="modal-overlay" id="addInstituteModal">
+    <div class="glass-panel modal-content">
+        <button class="modal-close" data-close-modal="addInstituteModal">&times;</button>
+        <h3 style="margin-bottom: 1.5rem;">Enstitü Ekle</h3>
+        <form method="POST" action="{{ url_for('units') }}" class="flex-col gap-4">
+            <input type="hidden" name="action" value="add_institute">
+            <div class="flex-col gap-2">
+                <label style="font-size: 0.9rem; color: var(--text-muted);">Enstitü Adı <span
+                        style="color:var(--danger)">*</span></label>
+                <input type="text" name="name" class="glass-input" required minlength="2" autocomplete="off"
+                    placeholder="Örn: Fen Bilimleri Enstitüsü">
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-muted);">Kod otomatik üretilir. Yeni enstitüler aktif olarak
+                eklenir.</p>
+            <div class="flex justify-center mt-2">
+                <button type="submit" class="glass-btn" style="min-width: 160px;">Enstitü Kaydet</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ═══════ POPUP 2: ENSTİTÜ DÜZENLE ═══════ -->
+<div class="modal-overlay" id="editInstituteModal">
+    <div class="glass-panel modal-content">
+        <button class="modal-close" data-close-modal="editInstituteModal">&times;</button>
+        <h3 style="margin-bottom: 1.5rem;">Enstitü Düzenle</h3>
+        <form id="editInstituteForm" method="POST" action="" class="flex-col gap-4">
+            <div class="flex-col gap-2">
+                <label style="font-size: 0.9rem; color: var(--text-muted);">Enstitü Kodu (otomatik)</label>
+                <input type="text" id="edit_inst_code" class="glass-input" disabled
+                    style="opacity: 0.7; cursor: not-allowed;">
+            </div>
+            <div class="flex-col gap-2">
+                <label style="font-size: 0.9rem; color: var(--text-muted);">Enstitü Adı <span
+                        style="color:var(--danger)">*</span></label>
+                <input type="text" id="edit_inst_name" name="name" class="glass-input" required minlength="2"
+                    autocomplete="off">
+            </div>
+            <div class="flex-col gap-2 mt-2">
+                <label style="font-size: 0.9rem; color: var(--text-muted);">Durum (Aktif / Pasif)</label>
+                <div class="toggle-container">
+                    <label class="switch">
+                        <input type="checkbox" id="edit_inst_is_active" name="is_active">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="toggle-label" id="editInstStatusLabel"
+                        style="color: var(--success); font-weight: 600;">Aktif</span>
+                </div>
+            </div>
+            <div class="flex justify-between items-center mt-4">
+                <button type="button" class="glass-btn glass-btn-danger"
+                    data-close-modal="editInstituteModal">İptal</button>
+                <button type="submit" class="glass-btn">Güncelle</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ═══════ POPUP 3: BİRİM EKLE ═══════ -->
+<div class="modal-overlay" id="addUnitModal">
+    <div class="glass-panel modal-content">
+        <button class="modal-close" data-close-modal="addUnitModal">&times;</button>
+        <h3 style="margin-bottom: 1.5rem;">Birim Ekle</h3>
+        <form method="POST" action="{{ url_for('units') }}" class="flex-col gap-4">
+            <input type="hidden" name="action" value="add_unit">
+            <div class="flex-col gap-2">
+                <label style="font-size: 0.9rem; color: var(--text-muted);">Enstitü <span
+                        style="color:var(--danger)">*</span></label>
+                <select name="institute_id" class="glass-input">
+                    <option value="" style="color:#000">-- Enstitü Yok (Bağımsız Birim) --</option>
+                    {% for inst in institutes %}
+                    {% if inst.is_active %}
+                    <option value="{{ inst.id }}" style="color:#000">{{ inst.name }} ({{ inst.code }})</option>
+                    {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex-col gap-2">
+                <label style="font-size: 0.9rem; color: var(--text-muted);">Birim Adı <span
+                        style="color:var(--danger)">*</span></label>
+                <input type="text" name="name" class="glass-input" required minlength="2" autocomplete="off"
+                    placeholder="Örn: Bilgi İşlem Dairesi">
+            </div>
+            <div class="flex justify-center mt-2">
+                <button type="submit" class="glass-btn" style="min-width: 160px;">Birim Kaydet</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ═══════ POPUP 4: BİRİM DÜZENLE ═══════ -->
+<div class="modal-overlay" id="editUnitModal">
+    <div class="glass-panel modal-content">
+        <button class="modal-close" data-close-modal="editUnitModal">&times;</button>
+        <h3 style="margin-bottom: 1.5rem;">Birim Düzenle</h3>
+        <form id="editUnitForm" method="POST" action="" class="flex-col gap-4">
+            <div class="flex-col gap-2">
+                <label style="font-size: 0.9rem; color: var(--text-muted);">Birim Kodu (otomatik)</label>
+                <input type="text" id="edit_unit_code" class="glass-input" disabled
+                    style="opacity: 0.7; cursor: not-allowed;">
+            </div>
+            <div class="flex-col gap-2">
+                <label style="font-size: 0.9rem; color: var(--text-muted);">Enstitü</label>
+                <!-- Pasif enstitüler kilitli; mevcut atama JS ile açılır -->
+                <select id="edit_unit_institute" name="institute_id" class="glass-input" required>
+                    <option value="" style="color:#000">-- Enstitü Seçin --</option>
+                    {% for inst in institutes %}
+                    <option value="{{ inst.id }}" style="color:#000" {% if not inst.is_active %}disabled
+                        data-passive="true" {% endif %}>
+                        {{ inst.name }} ({{ inst.code }}){% if not inst.is_active %} — Pasif{% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex-col gap-2">
+                <label style="font-size: 0.9rem; color: var(--text-muted);">Birim Adı <span
+                        style="color:var(--danger)">*</span></label>
+                <input type="text" id="edit_unit_name" name="name" class="glass-input" required minlength="2"
+                    autocomplete="off">
+            </div>
+            <div class="flex-col gap-2 mt-2">
+                <label style="font-size: 0.9rem; color: var(--text-muted);">Durum (Aktif / Pasif)</label>
+                <div class="toggle-container">
+                    <label class="switch">
+                        <input type="checkbox" id="edit_unit_is_active" name="is_active">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="toggle-label" id="editUnitStatusLabel"
+                        style="color: var(--success); font-weight: 600;">Aktif</span>
+                </div>
+            </div>
+            <div class="flex justify-between items-center mt-4">
+                <button type="button" class="glass-btn glass-btn-danger" data-close-modal="editUnitModal">İptal</button>
+                <button type="submit" class="glass-btn">Güncelle</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ═══════ POPUP 5: ALT BİRİM EKLE ═══════ -->
+<div class="modal-overlay" id="addSubUnitModal">
+    <div class="glass-panel modal-content">
+        <button class="modal-close" data-close-modal="addSubUnitModal">&times;</button>
+        <h3 style="margin-bottom: 1.5rem;">Alt Birim Ekle</h3>
+        <form method="POST" action="{{ url_for('units') }}" class="flex-col gap-4">
+            <input type="hidden" name="action" value="add_sub_unit">
+            <div class="flex-col gap-2">
+                <label style="font-size: 0.9rem; color: var(--text-muted);">Ana Birim <span
+                        style="color:var(--danger)">*</span></label>
+                <select name="unit_id" class="glass-input" required>
+                    <option value="" style="color:#000">-- Ana Birim Seçin --</option>
+                    {% for u in units %}
+                    {% if u.is_active %}
+                    <option value="{{ u.id }}" style="color:#000">{{ u.name }} ({{ u.code }})</option>
+                    {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex-col gap-2">
+                <label style="font-size: 0.9rem; color: var(--text-muted);">Alt Birim Adı <span
+                        style="color:var(--danger)">*</span></label>
+                <input type="text" name="name" class="glass-input" required minlength="2" autocomplete="off"
+                    placeholder="Örn: Donanım ve Ağ Şube Md.">
+            </div>
+            <div class="flex justify-center mt-2">
+                <button type="submit" class="glass-btn" style="min-width: 160px;">Alt Birim Kaydet</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ═══════ POPUP 6: ALT BİRİM DÜZENLE ═══════ -->
+<div class="modal-overlay" id="editSubUnitModal">
+    <div class="glass-panel modal-content">
+        <button class="modal-close" data-close-modal="editSubUnitModal">&times;</button>
+        <h3 style="margin-bottom: 1.5rem;">Alt Birim Düzenle</h3>
+        <form id="editSubUnitForm" method="POST" action="" class="flex-col gap-4">
+            <div class="flex-col gap-2">
+                <label style="font-size: 0.9rem; color: var(--text-muted);">Üst Birim</label>
+                <select id="edit_sub_parent" name="unit_id" class="glass-input" required>
+                    {% for u in units %}
+                    <option value="{{ u.id }}" style="color:#000" {% if not u.is_active %}disabled data-passive="true"
+                        {% endif %}>
+                        {{ u.name }} ({{ u.code }}){% if not u.is_active %} — Pasif{% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex-col gap-2">
+                <label style="font-size: 0.9rem; color: var(--text-muted);">Alt Birim Kodu (otomatik)</label>
+                <input type="text" id="edit_sub_code" class="glass-input" disabled
+                    style="opacity: 0.7; cursor: not-allowed;">
+            </div>
+            <div class="flex-col gap-2">
+                <label style="font-size: 0.9rem; color: var(--text-muted);">Alt Birim Adı <span
+                        style="color:var(--danger)">*</span></label>
+                <input type="text" id="edit_sub_name" name="name" class="glass-input" required minlength="2"
+                    autocomplete="off">
+            </div>
+            <div class="flex-col gap-2 mt-2">
+                <label style="font-size: 0.9rem; color: var(--text-muted);">Durum (Aktif / Pasif)</label>
+                <div class="toggle-container">
+                    <label class="switch">
+                        <input type="checkbox" id="edit_sub_is_active" name="is_active">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="toggle-label" id="editSubStatusLabel"
+                        style="color: var(--success); font-weight: 600;">Aktif</span>
+                </div>
+            </div>
+            <div class="flex justify-between items-center mt-4">
+                <button type="button" class="glass-btn glass-btn-danger"
+                    data-close-modal="editSubUnitModal">İptal</button>
+                <button type="submit" class="glass-btn">Güncelle</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // ===== Slider etiketi: Aktif = yeşil, Pasif = kırmızı =====
+    function updateToggleLabel(inputEl, labelEl) {
+        if (inputEl.checked) {
+            labelEl.textContent = 'Aktif';
+            labelEl.style.color = 'var(--success)';
+        } else {
+            labelEl.textContent = 'Pasif';
+            labelEl.style.color = 'var(--danger)';
+        }
+    }
+
+    // ===== Pasif seçenekleri kilitle, mevcut atamayı geçici aç =====
+    function prepareSelect(selectEl, selectedValue) {
+        selectEl.querySelectorAll('option[data-passive]').forEach(o => o.disabled = true);
+        if (selectedValue) {
+            let opt = selectEl.querySelector('option[value="' + selectedValue + '"]');
+            if (opt) {
+                opt.disabled = false;
+                selectEl.value = selectedValue;
+            } else {
+                selectEl.value = '';
+            }
+        } else {
+            selectEl.value = '';
+        }
+    }
+
+    // ===== Popup açma butonları =====
+    document.getElementById('openAddInstituteBtn').addEventListener('click', () =>
+        document.getElementById('addInstituteModal').classList.add('active'));
+    document.getElementById('openAddUnitBtn').addEventListener('click', () =>
+        document.getElementById('addUnitModal').classList.add('active'));
+    document.getElementById('openAddSubUnitBtn').addEventListener('click', () =>
+        document.getElementById('addSubUnitModal').classList.add('active'));
+
+    // ===== ENSTİTÜ DÜZENLE =====
+    const instToggle = document.getElementById('edit_inst_is_active');
+    const instLabel = document.getElementById('editInstStatusLabel');
+    instToggle.addEventListener('change', () => updateToggleLabel(instToggle, instLabel));
+
+    document.querySelectorAll('.edit-institute-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            document.getElementById('editInstituteForm').action = '/institutes/edit/' + this.dataset.id;
+            document.getElementById('edit_inst_code').value = this.dataset.code;
+            document.getElementById('edit_inst_name').value = this.dataset.name;
+            instToggle.checked = this.dataset.active === '1';
+            updateToggleLabel(instToggle, instLabel);
+            document.getElementById('editInstituteModal').classList.add('active');
+        });
+    });
+
+    // ===== BİRİM DÜZENLE =====
+    const unitModal = document.getElementById('editUnitModal');
+    const unitForm = document.getElementById('editUnitForm');
+    const unitInstSelect = document.getElementById('edit_unit_institute');
+    const unitToggle = document.getElementById('edit_unit_is_active');
+    const unitLabel = document.getElementById('editUnitStatusLabel');
+
+    unitToggle.addEventListener('change', () => updateToggleLabel(unitToggle, unitLabel));
+
+    document.querySelectorAll('.edit-unit-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            unitForm.action = '/units/edit/' + this.dataset.id;
+            document.getElementById('edit_unit_code').value = this.dataset.code;
+            document.getElementById('edit_unit_name').value = this.dataset.name;
+            prepareSelect(unitInstSelect, this.dataset.institute);
+            unitToggle.checked = this.dataset.active === '1';
+            updateToggleLabel(unitToggle, unitLabel);
+            unitModal.classList.add('active');
+        });
+    });
+
+    // ===== ALT BİRİM DÜZENLE =====
+    const subModal = document.getElementById('editSubUnitModal');
+    const subForm = document.getElementById('editSubUnitForm');
+    const subParentSelect = document.getElementById('edit_sub_parent');
+    const subToggle = document.getElementById('edit_sub_is_active');
+    const subLabel = document.getElementById('editSubStatusLabel');
+
+    subToggle.addEventListener('change', () => updateToggleLabel(subToggle, subLabel));
+
+    document.querySelectorAll('.edit-sub-unit-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            subForm.action = '/sub_units/edit/' + this.dataset.id;
+            document.getElementById('edit_sub_code').value = this.dataset.code;
+            document.getElementById('edit_sub_name').value = this.dataset.name;
+            prepareSelect(subParentSelect, this.dataset.unit);
+            subToggle.checked = this.dataset.active === '1';
+            updateToggleLabel(subToggle, subLabel);
+            subModal.classList.add('active');
+        });
+    });
+
+    // ===== Popup kapatma (× butonu, İptal ve dışına tıklama) =====
+    document.querySelectorAll('[data-close-modal]').forEach(btn => {
+        btn.addEventListener('click', () =>
+            document.getElementById(btn.dataset.closeModal).classList.remove('active'));
+    });
+
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', e => {
+            if (e.target === overlay) overlay.classList.remove('active');
+        });
+    });
+
+    // ESC ile kapatma
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+        }
+    });
+</script>
+{% endblock %}

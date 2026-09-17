@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex items-center justify-center" style="min-height: 80vh;">
+    <div class="glass-panel" style="padding: 2.5rem; width: 100%; max-width: 400px;">
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem;">Sisteme Giriş</h2>
+            <p style="font-size: 0.9rem;">Lütfen bilgilerinizi giriniz.</p>
+        </div>
+
+        <form method="POST" action="{{ url_for('login') }}" class="flex-col gap-4">
+            <div class="flex-col gap-2">
+                <label for="username" style="font-size: 0.9rem; color: var(--text-muted);">Kullanıcı Adı</label>
+                <input type="text" id="username" name="username" class="glass-input" required autocomplete="off">
+            </div>
+            
+            <div class="flex-col gap-2" style="margin-bottom: 1rem;">
+                <label for="password" style="font-size: 0.9rem; color: var(--text-muted);">Şifre</label>
+                <input type="password" id="password" name="password" class="glass-input" required>
+            </div>
+
+            <button type="submit" class="glass-btn" style="width: 100%;">Giriş Yap</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
