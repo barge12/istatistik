@@ -1,12 +1,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-    --bg-color: #0f172a;
-    --glass-bg: rgba(255, 255, 255, 0.05);
+    --bg-color: white;
+    --glass-bg: #FFF8E7;
+    /*rgba(255, 255, 255, 0.05);*/
     --glass-border: rgba(255, 255, 255, 0.1);
     --primary: #3b82f6;
     --primary-hover: #2563eb;
-    --text-main: #f8fafc;
+    --text-main: #657fa2;
     --text-muted: #94a3b8;
     --danger: #ef4444;
     --success: #10b981;
@@ -224,7 +225,7 @@ body {
     text-decoration: none;
     display: block;
     font-size: 0.9rem;
-    transition: background 0.2s;
+    transition: background 0.6s;
 }
 
 .dropdown-content a:hover {
@@ -500,7 +501,8 @@ p {
     left: 0;
     top: calc(100% + 12px);
     min-width: 210px;
-    background: rgba(20, 25, 40, 0.95);
+    background: var(--bg-color);
+    /* rgba(20, 25, 40, 0.95);*/
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(255, 255, 255, 0.12);
@@ -516,14 +518,21 @@ p {
 }
 
 @keyframes menuSlideDown {
-    from { opacity: 0; transform: translateY(-8px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .menu-content a {
     display: block;
     padding: 11px 16px;
-    color: var(--text-primary, #e5e7eb);
+    color: var(--text-main);
     text-decoration: none;
     border-radius: 9px;
     font-size: 0.95rem;
@@ -537,7 +546,245 @@ p {
 
 /* Bulunulan sayfanın menüde işaretlenmesi */
 .menu-content a.menu-active {
-    background: rgba(59, 130, 246, 0.22);
-    color: var(--primary, #3b82f6);
+    background: rgba(112, 125, 146, 0.22);
+    color: var(--primary, #3b4f81);
     font-weight: 600;
+}
+
+/* ===== Yeşil Daire Avatar (Ad Kısaltması) ===== */
+.user-avatar-circle {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background-color: var(--success, #10b981);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    user-select: none;
+}
+
+.user-avatar-circle:hover {
+    transform: scale(1.08);
+    box-shadow: 0 0 16px rgba(16, 185, 129, 0.6);
+}
+
+/* ===== Bildirim Menüsü ===== */
+.notif-btn {
+    background: transparent;
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 6px;
+    position: relative;
+    border-radius: 50%;
+    transition: background 0.2s;
+}
+
+.notif-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.notif-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: var(--danger);
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 5px;
+    border-radius: 10px;
+    line-height: 1;
+}
+
+.notif-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 10px);
+    width: 280px;
+    background: rgba(15, 23, 42, 0.96);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+}
+
+.notif-content.show {
+    display: block;
+    animation: menuSlideDown 0.2s ease;
+}
+
+.notif-unread {
+    background: rgba(59, 130, 246, 0.15);
+}
+
+/* ===== Sağ Üst Köşe Toast Bildirimleri ===== */
+.toast-container {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 380px;
+    width: calc(100% - 48px);
+    pointer-events: none;
+}
+
+.toast-message {
+    pointer-events: auto;
+    background: rgba(15, 23, 42, 0.94);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 12px;
+    padding: 14px 18px;
+    color: var(--text-main);
+    font-size: 0.9rem;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    animation: toastSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toast-success {
+    border-left: 4px solid var(--success, #10b981);
+}
+
+.toast-error {
+    border-left: 4px solid var(--danger, #ef4444);
+}
+
+/* Siyah Arka Plan - Kırmızı Yazı Bildirim Toast'ı */
+.toast-notif-black-red {
+    background: #000000 !important;
+    color: #ef4444 !important;
+    border: 1px solid #ef4444 !important;
+    border-left: 5px solid #dc2626 !important;
+    box-shadow: 0 10px 30px rgba(239, 68, 68, 0.4) !important;
+}
+
+.toast-close {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    cursor: pointer;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.toast-close:hover {
+    color: white;
+}
+
+@keyframes toastSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(60px) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes toastFadeOut {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateX(60px);
+    }
+}
+
+textarea.glass-input {
+    resize: none !important;
+}
+
+/* ===== KOD TOOLTIP ===== */
+.code-tooltip {
+    position: relative;
+    cursor: help;
+    border-bottom: 1px dashed var(--text-muted);
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+.code-tooltip::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #111827;
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 400;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease;
+    z-index: 9999;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.code-tooltip::before {
+    content: '';
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-bottom-color: #111827;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease;
+    z-index: 9999;
+}
+
+.code-tooltip:hover::after,
+.code-tooltip:hover::before {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* ===== ÖZEL YETKİLİ SATIR (YEŞİL FONT) ===== */
+tr.auth-green-row td,
+tr.auth-green-row td span {
+    color: #22c55e !important;
+    font-weight: 600 !important;
+    background-color: rgba(34, 197, 94, 0.07);
+}
+
+/* ===== LOGIN LOGO ===== */
+.login-logo {
+    display: block;
+    /* inline olmaktan çıkar, margin ile ortalanır */
+    margin: 0 auto 1rem auto;
+    /* yatay ortala + altına 1rem boşluk */
+    width: 120px;
+    /* logo genişliği — ihtiyaca göre değiştirin */
+    height: auto;
+    /* en-boy oranını korur */
+    object-fit: contain;
+    border-radius: 12px;
+    /* köşeleri yumuşat (istemezseniz silin) */
 }
