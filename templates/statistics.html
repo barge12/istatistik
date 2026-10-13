@@ -21,53 +21,112 @@
                         <th style="width: 40px;"><input type="checkbox" id="selectAll"></th>
                         <th>Kullanıcı</th>
                         <th>Tarih / Saat</th>
+                        <th>Enstitü</th>
                         <th>Birim</th>
                         <th>Alt Birim</th>
                         <th>Veri Başlığı</th>
                         <th>Not</th>
+                        {% if current_user.role in ['admin', 'rootadmin'] %}
+                        <th>Durum</th>
+                        {% endif %}
                         {% if current_user.role == 'rootadmin' %}
                         <th>Özel Yetki</th>
+                        <th>Aktif / Pasif</th>
                         {% endif %}
-                        <th>Durum</th>
                         <th>Dosya</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for d in data %}
-                    <tr>
+                    <tr style="{% if d.is_active == 0 %}opacity: 0.45;{% endif %}">
                         <td>
                             {% if d.file_path %}
                             <input type="checkbox" class="row-checkbox"
-                                data-file="{{ url_for('download_file', data_id=d.id) }}">
+                                data-file="{{ url_for('download_file', data_id=d.id) }}" {% if d.is_active==0
+                                %}disabled{% endif %}>
                             {% endif %}
                         </td>
-                        <td>{{ d.user }}</td>
+                        <td>
+                            <span class="code-tooltip" data-tooltip="{{ d.user_full_name or d.user }}">{{ d.user
+                                }}</span>
+                        </td>
                         <td>{{ d.day }}/{{ d.month }}/{{ d.year }} {{ d.time }}</td>
-                        <td>{{ d.unit or '-' }}</td>
-                        <td>{{ d.sub_unit or '-' }}</td>
+                        <td>
+                            {% if d.institute_code %}
+                            <span class="code-tooltip" data-tooltip="{{ d.institute }}">{{ d.institute_code }}</span>
+                            {% else %}
+                            <span style="color: var(--text-muted);">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if d.unit_code %}
+                            <span class="code-tooltip" data-tooltip="{{ d.unit }}">{{ d.unit_code }}</span>
+                            {% else %}
+                            <span style="color: var(--text-muted);">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if d.sub_unit_code %}
+                            <span class="code-tooltip" data-tooltip="{{ d.sub_unit }}">{{ d.sub_unit_code }}</span>
+                            {% else %}
+                            <span style="color: var(--text-muted);">-</span>
+                            {% endif %}
+                        </td>
                         <td>{{ d.title }}</td>
                         <td>{{ d.note or '-' }}</td>
-                        {% if current_user.role == 'rootadmin' %}
+                        {% if current_user.role in ['admin', 'rootadmin'] %}
                         <td>
-                            {% if d.special_auth %}
-                            <span style="color: var(--success); font-weight: 500;">Evet</span>
+                            {% if d.updated_at %}
+                            <span style="color: #14b8a6; font-weight: 700;">Güncellendi</span>
+                            {% elif d.status == 'indirildi' %}
+                            <span style="color: #22c55e; font-weight: 600;">İndirildi</span>
                             {% else %}
-                            <span style="color: var(--text-muted);">Hayır</span>
+                            <span style="color: #ef4444; font-weight: 600;">Beklemede</span>
                             {% endif %}
                         </td>
                         {% endif %}
-                        <!-- ✅ DURUM: Sadece gösterilir, otomatik güncellenir -->
+                        {% if current_user.role == 'rootadmin' %}
                         <td>
-                            {% if d.status == 'indirildi' %}
-                            <span class="status-badge status-indirildi">İndirildi</span>
+                            {% if d.is_active == 0 %}
+                            <button class="glass-btn" disabled
+                                style="padding: 3px 8px; font-size: 0.75rem; opacity: 0.4; cursor: not-allowed;">
+                                🔒 Kilitli
+                            </button>
                             {% else %}
-                            <span class="status-badge status-beklemede">Beklemede</span>
+                            <button type="button" class="glass-btn special-auth-btn"
+                                style="padding: 3px 8px; font-size: 0.75rem;" data-id="{{ d.id }}"
+                                data-title="{{ d.title }}" data-auth="{{ d.special_auth or '' }}">
+                                🔐 {% if d.special_auth %}Yetkili ({{ d.special_auth.split(',') | length }}){% else
+                                %}Yetki Ver{% endif %}
+                            </button>
                             {% endif %}
                         </td>
                         <td>
-                            {% if d.file_path %}
-                            <a href="{{ url_for('download_file', data_id=d.id) }}" class="glass-btn"
-                                style="padding: 4px 10px; font-size: 0.8rem; text-decoration: none;">İndir</a>
+                            <div class="toggle-container">
+                                <label class="switch">
+                                    <input type="checkbox" class="data-active-toggle" data-id="{{ d.id }}" {% if
+                                        d.is_active is none or d.is_active %}checked{% endif %}>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        </td>
+                        {% endif %}
+                        <td>
+                            {% if d.file_path and (d.is_active is none or d.is_active) %}
+                            <div class="flex gap-2" style="align-items: center;">
+                                <a href="{{ url_for('download_file', data_id=d.id) }}" class="glass-btn"
+                                    style="padding: 4px 10px; font-size: 0.8rem; text-decoration: none;">İndir</a>
+                                {% if current_user.role == 'rootadmin' %}
+                                <button type="button" class="glass-btn update-file-btn"
+                                    style="padding: 4px 10px; font-size: 0.75rem;" data-id="{{ d.id }}"
+                                    data-title="{{ d.title }}" data-updated-by="{{ d.updated_by or '' }}"
+                                    data-updated-at="{{ d.updated_at or '' }}">
+                                    🔄 Güncelle
+                                </button>
+                                {% endif %}
+                            </div>
+                            {% elif d.file_path %}
+                            <span style="color: var(--danger); font-weight: 700; font-size: 0.85rem;">🔒</span>
                             {% else %}
                             <span style="color: var(--text-muted)">Yok</span>
                             {% endif %}
@@ -75,7 +134,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="{% if current_user.role == 'rootadmin' %}10{% else %}9{% endif %}"
+                        <td colspan="{% if current_user.role == 'rootadmin' %}12{% else %}10{% endif %}"
                             style="text-align: center; color: var(--text-muted);">Henüz veri bulunmuyor.</td>
                     </tr>
                     {% endfor %}
@@ -88,22 +147,40 @@
     {% if current_user.role == 'rootadmin' %}
     <div class="glass-panel" style="padding: 2rem; margin-top: 1rem;">
         <h3 style="margin-bottom: 1.5rem;">İstatistik / Veri Gönder Formu</h3>
-        <form method="POST" action="{{ url_for('upload') }}" enctype="multipart/form-data" class="flex-col gap-4">
+        <form method="POST" action="{{ url_for('upload') }}" enctype="multipart/form-data" class="flex-col gap-4"
+            onsubmit="let b=this.querySelector('button[type=submit]'); b.disabled=true; b.innerText='Gönderiliyor...';">
 
             <div class="flex-col gap-2">
                 <label for="title" style="font-size: 0.9rem; color: var(--text-muted);">
-                    Veri Başlığı <span style="color:var(--danger)">*</span> (En az 6 karakter)
+                    Veri Başlığı <span style="color:var(--danger)">*</span> (En az 6 karakter, özel karakter içeremez)
                 </label>
                 <input type="text" id="title" name="title" class="glass-input" minlength="6" required autocomplete="off"
+                    pattern="[a-zA-Z0-9çÇğĞıİöÖşŞüÜ\s]{6,}"
+                    title="Veri başlığı en az 6 karakter olmalı ve özel karakter içermemelidir."
                     placeholder="Veri başlığını giriniz...">
             </div>
 
             <div class="flex-col gap-2">
                 <label for="note" style="font-size: 0.9rem; color: var(--text-muted);">Not</label>
-                <textarea id="note" name="note" class="glass-input" rows="3" placeholder="Ek notlar..."></textarea>
+                <textarea id="note" name="note" class="glass-input" rows="3" placeholder="Ek notlar..."
+                    style="resize: none;"></textarea>
             </div>
 
             <div class="flex gap-4">
+                <div class="flex-col gap-2" style="flex: 1;">
+                    <label for="institute_id" style="font-size: 0.9rem; color: var(--text-muted);">Enstitü (İsteğe
+                        Bağlı)</label>
+                    <select id="institute_id" class="glass-input">
+                        <option value="" style="color:#000">-- Enstitü Seçin (Tüm Birimler) --</option>
+                        {% for inst in institutes %}
+                        {% if inst.is_active %}
+                        <option value="{{ inst.id }}" style="color:#000">{{ inst.name }} ({{ inst.code }})</option>
+                        {% endif %}
+                        {% endfor %}
+                        <option value="none" style="color:#000">-- Enstitü Yok (Bağımsız Birim) --</option>
+                    </select>
+                </div>
+
                 <div class="flex-col gap-2" style="flex: 1;">
                     <label for="unit_id" style="font-size: 0.9rem; color: var(--text-muted);">Birim <span
                             style="color:var(--danger)">*</span></label>
@@ -111,16 +188,17 @@
                         <option value="" style="color:#000">-- Birim Seçin --</option>
                         {% for un in units %}
                         {% if un.is_active %}
-                        <option value="{{ un.id }}" style="color:#000">{{ un.name }} ({{ un.code }})</option>
+                        <option value="{{ un.id }}" style="color:#000" data-institute="{{ un.institute_id or '' }}">{{
+                            un.name }} ({{ un.code }})</option>
                         {% endif %}
                         {% endfor %}
                     </select>
                 </div>
 
                 <div class="flex-col gap-2" style="flex: 1;">
-                    <label for="sub_unit_id" style="font-size: 0.9rem; color: var(--text-muted);">Alt Birim <span
-                            style="color:var(--danger)">*</span></label>
-                    <select id="sub_unit_id" name="sub_unit_id" class="glass-input" required disabled>
+                    <label for="sub_unit_id" style="font-size: 0.9rem; color: var(--text-muted);">Alt Birim (İsteğe
+                        Bağlı)</label>
+                    <select id="sub_unit_id" name="sub_unit_id" class="glass-input" disabled>
                         <option value="" style="color:#000">-- Önce Birim Seçin --</option>
                     </select>
                 </div>
@@ -133,16 +211,87 @@
             </div>
 
             <div class="flex-col gap-2">
-                <label for="file" style="font-size: 0.9rem; color: var(--text-muted);">Veri Dosyası (ZIP vb.)</label>
-                <input type="file" id="file" name="file" class="glass-input" accept=".zip,.rar,.pdf,.csv,.xlsx">
+                <label for="file" style="font-size: 0.9rem; color: var(--text-muted);">Veri Dosyası (Sadece .zip) <span
+                        style="color:var(--danger)">*</span></label>
+                <input type="file" id="file" name="file" class="glass-input" required
+                    accept=".zip,application/zip,application/x-zip-compressed">
             </div>
 
             <button type="submit" class="glass-btn mt-4" style="width: max-content;">İstatistik Ekle</button>
         </form>
     </div>
+
+    <!-- 3. ÖZEL YETKİ POPUP MODALI (SADECE ROOTADMIN) -->
+    <div class="modal-overlay" id="specialAuthModal">
+        <div class="glass-panel modal-content" style="max-width: 500px;">
+            <button class="modal-close" id="closeSpecialAuthModalBtn">&times;</button>
+            <h3 style="margin-bottom: 1rem;">🔐 Özel Yetki Ver</h3>
+
+            <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px;" class="mb-4">
+                <strong style="color: var(--text-muted);">Veri Başlığı:</strong>
+                <span id="specialAuthDataTitle" style="font-weight: 600;"></span>
+            </div>
+
+            <form id="specialAuthForm" method="POST" action="" class="flex-col gap-4">
+                <div class="flex-col gap-2">
+                    <label for="specialAuthInput" style="font-size: 0.9rem; color: var(--text-muted);">
+                        Yetkili Kullanıcı Adları (virgülle ayırın)
+                    </label>
+                    <textarea id="specialAuthInput" name="special_auth" class="glass-input" rows="3"
+                        style="resize: none;" placeholder="örn: ahmet.yilmaz, mehmet.kaya"></textarea>
+                    <small style="font-size: 0.75rem; color: var(--text-muted);">
+                        Belirtilen kullanıcılar bu istatistiği dashboard'da yeşil renkte görür. Listeyi boşaltıp
+                        kaydederseniz yetkiler kaldırılır.
+                    </small>
+                </div>
+                <div class="flex justify-between items-center mt-4">
+                    <button type="button" class="glass-btn glass-btn-danger" id="cancelSpecialAuthBtn">İptal</button>
+                    <button type="submit" class="glass-btn">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
     {% endif %}
 
 </div>
+<!-- 4. DOSYA GÜNCELLEME POPUP MODALI (SADECE ROOTADMIN) -->
+<div class="modal-overlay" id="updateFileModal">
+    <div class="glass-panel modal-content" style="max-width: 500px;">
+        <button class="modal-close" id="closeUpdateFileModalBtn">&times;</button>
+        <h3 style="margin-bottom: 1rem;">🔄 Dosya Güncelle</h3>
+
+        <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px;" class="flex-col gap-2 mb-4">
+            <div><strong style="color: var(--text-muted);">Veri Başlığı:</strong>
+                <span id="updateFileDataTitle" style="font-weight: 600;"></span>
+            </div>
+            <div><strong style="color: var(--text-muted);">Güncelleyen Kullanıcı:</strong>
+                <span id="updateFileBy" style="color: var(--primary);">Henüz güncellenmedi</span>
+            </div>
+            <div><strong style="color: var(--text-muted);">Son Güncelleme Tarihi:</strong>
+                <span id="updateFileAt">—</span>
+            </div>
+        </div>
+
+        <form id="updateFileForm" method="POST" action="" enctype="multipart/form-data" class="flex-col gap-4"
+            onsubmit="let b=this.querySelector('button[type=submit]'); b.disabled=true; b.innerText='Güncelleniyor...';">
+            <div class="flex-col gap-2">
+                <label for="update_file_input" style="font-size: 0.9rem; color: var(--text-muted);">
+                    Yeni Dosya (Sadece .zip) <span style="color:var(--danger)">*</span>
+                </label>
+                <input type="file" id="update_file_input" name="file" class="glass-input" required
+                    accept=".zip,application/zip,application/x-zip-compressed">
+                <small style="font-size: 0.75rem; color: var(--text-muted);">
+                    Güncelleme sonrası "İndir" butonu bu yeni dosyayı verecektir.
+                </small>
+            </div>
+            <div class="flex justify-between items-center mt-4">
+                <button type="button" class="glass-btn glass-btn-danger" id="cancelUpdateFileBtn">İptal</button>
+                <button type="submit" class="glass-btn">Güncelle</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -162,15 +311,14 @@
         });
     });
 
-    // Select All
+    // Select All (pasif satırların kilitli checkbox'larını atlar)
     document.getElementById('selectAll').addEventListener('change', function () {
-        let checkboxes = document.querySelectorAll('.row-checkbox');
+        let checkboxes = document.querySelectorAll('.row-checkbox:not(:disabled)');
         for (let checkbox of checkboxes) {
             checkbox.checked = this.checked;
         }
     });
-
-    // Download Selected Files — her indirme otomatik durumu günceller
+    // Download Selected Files
     document.getElementById('downloadSelectedBtn').addEventListener('click', function () {
         let checkboxes = document.querySelectorAll('.row-checkbox:checked');
         if (checkboxes.length === 0) {
@@ -189,13 +337,47 @@
             }, index * 400);
         });
 
-        // Durum etiketlerinin güncel görünmesi için sayfayı yenile
         setTimeout(() => location.reload(), (checkboxes.length * 400) + 1000);
     });
 
-    // Dynamic Sub-units fetch
+    // ========== ENSTİTÜ → BİRİM FİLTRELEME + ALT BİRİM YÜKLEME ==========
+    let instSelect = document.getElementById('institute_id');
     let unitSelect = document.getElementById('unit_id');
     let subUnitSelect = document.getElementById('sub_unit_id');
+
+    const allUnitOptions = unitSelect ? Array.from(unitSelect.querySelectorAll('option[data-institute]')) : [];
+
+    if (instSelect && unitSelect) {
+        instSelect.addEventListener('change', function () {
+            const instVal = this.value;
+            const instId = instVal === 'none' ? '' : instVal;
+
+            subUnitSelect.innerHTML = '<option value="" style="color:#000">-- Önce Birim Seçin --</option>';
+            subUnitSelect.disabled = true;
+
+            unitSelect.innerHTML = '';
+            const defOpt = document.createElement('option');
+            defOpt.value = '';
+            defOpt.style.color = '#000';
+            defOpt.textContent = '-- Birim Seçin --';
+            unitSelect.appendChild(defOpt);
+
+            let count = 0;
+            allUnitOptions.forEach(opt => {
+                if (!instVal || opt.dataset.institute === instId) {
+                    unitSelect.appendChild(opt.cloneNode(true));
+                    count++;
+                }
+            });
+
+            if (count === 0) {
+                defOpt.textContent = 'Bu enstitüye ait aktif birim yok';
+                unitSelect.disabled = true;
+            } else {
+                unitSelect.disabled = false;
+            }
+        });
+    }
 
     if (unitSelect) {
         unitSelect.addEventListener('change', function () {
@@ -211,7 +393,7 @@
             fetch('/get_sub_units/' + unitId)
                 .then(response => response.json())
                 .then(data => {
-                    subUnitSelect.innerHTML = '<option value="" style="color:#000">-- Alt Birim Seçin --</option>';
+                    subUnitSelect.innerHTML = '<option value="" style="color:#000">-- Alt Birim Seçin (İsteğe Bağlı) --</option>';
                     if (data.length === 0) {
                         subUnitSelect.innerHTML = '<option value="" style="color:#000">Bu birime ait aktif alt birim yok</option>';
                     } else {
@@ -231,5 +413,64 @@
                 });
         });
     }
+
+    {% if current_user.role == 'rootadmin' %}
+    // ========== ÖZEL YETKİ MODALI ==========
+    const saModal = document.getElementById('specialAuthModal');
+    const saForm = document.getElementById('specialAuthForm');
+    const saInput = document.getElementById('specialAuthInput');
+
+    document.querySelectorAll('.special-auth-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            saForm.action = '/data/special_auth/' + this.dataset.id;
+            document.getElementById('specialAuthDataTitle').textContent = this.dataset.title;
+            saInput.value = this.dataset.auth || '';
+            saModal.classList.add('active');
+        });
+    });
+
+    document.getElementById('closeSpecialAuthModalBtn').addEventListener('click', () => saModal.classList.remove('active'));
+    document.getElementById('cancelSpecialAuthBtn').addEventListener('click', () => saModal.classList.remove('active'));
+    saModal.addEventListener('click', (e) => {
+        if (e.target === saModal) saModal.classList.remove('active');
+    });
+
+    // ========== AKTİF / PASİF SLIDER (anında form gönderir) ==========
+    document.querySelectorAll('.data-active-toggle').forEach(t => {
+        t.addEventListener('change', function () {
+            const f = document.createElement('form');
+            f.method = 'POST';
+            f.action = '/data/toggle_active/' + this.dataset.id;
+            const i = document.createElement('input');
+            i.type = 'hidden';
+            i.name = 'is_active';
+            if (this.checked) i.value = 'on';
+            f.appendChild(i);
+            document.body.appendChild(f);
+            f.submit();
+        });
+    });
+    // ========== DOSYA GÜNCELLEME MODALI ==========
+    const ufModal = document.getElementById('updateFileModal');
+    const ufForm = document.getElementById('updateFileForm');
+
+    document.querySelectorAll('.update-file-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            ufForm.action = '/data/update_file/' + this.dataset.id;
+            document.getElementById('updateFileDataTitle').textContent = this.dataset.title;
+            document.getElementById('updateFileBy').textContent = this.dataset.updatedBy || 'Henüz güncellenmedi';
+            document.getElementById('updateFileAt').textContent = this.dataset.updatedAt || '—';
+            document.getElementById('update_file_input').value = '';
+            ufModal.classList.add('active');
+        });
+    });
+
+    document.getElementById('closeUpdateFileModalBtn').addEventListener('click', () => ufModal.classList.remove('active'));
+    document.getElementById('cancelUpdateFileBtn').addEventListener('click', () => ufModal.classList.remove('active'));
+    ufModal.addEventListener('click', (e) => {
+        if (e.target === ufModal) ufModal.classList.remove('active');
+    });
+
+    {% endif %}
 </script>
 {% endblock %}

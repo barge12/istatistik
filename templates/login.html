@@ -3,9 +3,9 @@
 {% block content %}
 <div class="flex items-center justify-center" style="min-height: 80vh;">
     <div class="glass-panel" style="padding: 2.5rem; width: 100%; max-width: 400px;">
-        <div style="text-align: center; margin-bottom: 2rem;">
-            <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem;">Sisteme Giriş</h2>
-            <p style="font-size: 0.9rem;">Lütfen bilgilerinizi giriniz.</p>
+        <div style="text-align: center; margin-bottom: 1rem;">
+            <img src="{{ url_for('static', filename='images/logo_white24.png') }}" alt="Logo" class="login-logo">
+            <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem;">İstatistik Yükleme Giriş</h2>
         </div>
 
         <form method="POST" action="{{ url_for('login') }}" class="flex-col gap-4">
@@ -13,14 +13,71 @@
                 <label for="username" style="font-size: 0.9rem; color: var(--text-muted);">Kullanıcı Adı</label>
                 <input type="text" id="username" name="username" class="glass-input" required autocomplete="off">
             </div>
-            
-            <div class="flex-col gap-2" style="margin-bottom: 1rem;">
+
+            <div class="flex-col gap-2" style="margin-bottom: 0.5rem;">
                 <label for="password" style="font-size: 0.9rem; color: var(--text-muted);">Şifre</label>
                 <input type="password" id="password" name="password" class="glass-input" required>
-            </div>
 
-            <button type="submit" class="glass-btn" style="width: 100%;">Giriş Yap</button>
+            </div>
+            <div class="flex-col gap-2">
+                <button type="button" id="openForgotModalBtn"
+                    style="background: none; border: none; color: var(--primary); font-size: 0.8rem; cursor: pointer; text-decoration: underline; padding:0;text-align:right;">Şifremi
+                    Unuttum</button>
+                <button type="submit" class="glass-btn" style="width: 100%; margin-top: 0.5rem;">Giriş Yap</button>
+            </div>
         </form>
     </div>
 </div>
+
+<!-- 🔑 ŞİFREMİ UNUTTUM MODALI -->
+<div class="modal-overlay" id="forgotPasswordModal">
+    <div class="glass-panel modal-content" style="max-width: 400px;">
+        <button type="button" class="modal-close" id="closeForgotModalBtn">&times;</button>
+        <h3 style="margin-bottom: 1rem;">🔑 Şifremi Unuttum</h3>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem; line-height: 1.4;">
+            Kullanıcı adınızı giriniz. Şifre yenileme bağlantısı <strong>kullanıcıadı@tuseb.gov.tr</strong> adresinize
+            e-posta ile gönderilecektir.
+        </p>
+
+        <form method="POST" action="{{ url_for('forgot_password') }}" class="flex-col gap-4"
+            onsubmit="let b=this.querySelector('button[type=submit]'); b.disabled=true; b.innerText='Gönderiliyor...';">
+            <div class="flex-col gap-2">
+                <label for="forgot_username" style="font-size: 0.9rem; color: var(--text-muted);">Kullanıcı Adı <span
+                        style="color:var(--danger)">*</span></label>
+                <input type="text" id="forgot_username" name="username" class="glass-input" required autocomplete="off"
+                    placeholder="Örn:username">
+            </div>
+
+            <div class="flex justify-between items-center mt-4">
+                <button type="button" class="glass-btn glass-btn-danger" id="cancelForgotModalBtn">İptal</button>
+                <button type="submit" class="glass-btn">Şifremi Sıfırla</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const forgotModal = document.getElementById('forgotPasswordModal');
+    const openForgotBtn = document.getElementById('openForgotModalBtn');
+    const closeForgotBtn = document.getElementById('closeForgotModalBtn');
+    const cancelForgotBtn = document.getElementById('cancelForgotModalBtn');
+
+    if (openForgotBtn && forgotModal) {
+        openForgotBtn.addEventListener('click', function () {
+            const loginUsername = document.getElementById('username').value;
+            if (loginUsername) {
+                document.getElementById('forgot_username').value = loginUsername;
+            }
+            forgotModal.classList.add('active');
+        });
+
+        if (closeForgotBtn) closeForgotBtn.addEventListener('click', () => forgotModal.classList.remove('active'));
+        if (cancelForgotBtn) cancelForgotBtn.addEventListener('click', () => forgotModal.classList.remove('active'));
+        forgotModal.addEventListener('click', (e) => {
+            if (e.target === forgotModal) forgotModal.classList.remove('active');
+        });
+    }
+</script>
 {% endblock %}

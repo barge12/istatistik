@@ -25,17 +25,24 @@
                         {% endif %}
                         <th>Kullanıcı</th>
                         <th>Tarih / Saat</th>
+                        <th>Enstitü</th>
                         <th>Birim</th>
                         <th>Alt Birim</th>
                         <th>Veri Başlığı</th>
                         <th>Not</th>
-
+                        {% if current_user.role == 'rootadmin' %}
+                        <th>Talep</th>
+                        {% endif %}
+                        {% if current_user.role in ['admin', 'rootadmin'] %}
+                        <th>Durum</th>
+                        {% endif %}
                         <th>Dosya</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for d in data %}
-                    <tr>
+
+                    <tr class="{% if d.id in authorized_ids %}auth-green-row{% endif %}">
                         {% if current_user.role in ['admin', 'rootadmin'] %}
                         <td>
                             {% if d.file_path %}
@@ -44,19 +51,58 @@
                             {% endif %}
                         </td>
                         {% endif %}
-                        <td>{{ d.user }}</td>
+                        <td>
+                            <span class="code-tooltip" data-tooltip="{{ d.user_full_name or d.user }}">{{ d.user
+                                }}</span>
+                        </td>
                         <td>{{ d.day }}/{{ d.month }}/{{ d.year }} {{ d.time }}</td>
-                        <td>{{ d.unit or '-' }}</td>
-                        <td>{{ d.sub_unit or '-' }}</td>
+                        <td>
+                            {% if d.institute_code %}
+                            <span class="code-tooltip" data-tooltip="{{ d.institute }}">{{ d.institute_code }}</span>
+                            {% else %}
+                            <span style="color: var(--text-muted);">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if d.unit_code %}
+                            <span class="code-tooltip" data-tooltip="{{ d.unit }}">{{ d.unit_code }}</span>
+                            {% else %}
+                            <span style="color: var(--text-muted);">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if d.sub_unit_code %}
+                            <span class="code-tooltip" data-tooltip="{{ d.sub_unit }}">{{ d.sub_unit_code }}</span>
+                            {% else %}
+                            <span style="color: var(--text-muted);">-</span>
+                            {% endif %}
+                        </td>
                         <td>{{ d.title }}</td>
                         <td>{{ d.note or '-' }}</td>
-                        <!--   <td>
-                            {% if d.status == 'indirildi' %}
-                            <span class="status-badge status-indirildi">İndirildi</span>
+                        {% if current_user.role == 'rootadmin' %}
+                        <td>
+                            {% if d.request_note %}
+                            <button type="button" class="glass-btn request-popup-btn"
+                                style="padding: 3px 8px; font-size: 0.75rem;" data-id="{{ d.id }}"
+                                data-title="{{ d.title }}" data-user="{{ d.user_full_name or d.user }}"
+                                data-request="{{ d.request_note }}" data-status="{{ d.approval_status }}"
+                                data-reason="{{ d.rejection_reason or '' }}">
+                                📋 Talep Görüntüle
+                            </button>
                             {% else %}
-                            <span class="status-badge status-beklemede">Beklemede</span>
+                            <span style="color: var(--text-muted); font-size: 0.8rem;">Yok</span>
                             {% endif %}
-                        </td>-->
+                        </td>
+                        {% endif %}
+                        {% if current_user.role in ['admin', 'rootadmin'] %}
+                        <td>
+                            {% if d.status == 'indirildi' %}
+                            <span style="color: #22c55e; font-weight: 600;">İndirildi</span>
+                            {% else %}
+                            <span style="color: #ef4444; font-weight: 600;">Beklemede</span>
+                            {% endif %}
+                        </td>
+                        {% endif %}
                         <td>
                             {% if d.file_path %}
                             <a href="{{ url_for('download_file', data_id=d.id) }}" class="glass-btn"
@@ -68,7 +114,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="{% if current_user.role in ['admin', 'rootadmin'] %}9{% else %}8{% endif %}"
+                        <td colspan="{% if current_user.role == 'rootadmin' %}11{% elif current_user.role == 'admin' %}10{% else %}8{% endif %}"
                             style="text-align: center; color: var(--text-muted);">Henüz kayıtlı veri bulunmuyor.</td>
                     </tr>
                     {% endfor %}
@@ -81,14 +127,24 @@
     {% if current_user.role == 'user' %}
     <div class="glass-panel" style="padding: 2rem; margin-top: 1rem;">
         <h3 style="margin-bottom: 1.5rem;">Veri Gönder</h3>
-        <form method="POST" action="{{ url_for('upload') }}" enctype="multipart/form-data" class="flex-col gap-4">
+        <form method="POST" action="{{ url_for('upload') }}" enctype="multipart/form-data" class="flex-col gap-4"
+            onsubmit="let b=this.querySelector('button[type=submit]'); b.disabled=true; b.innerText='Gönderiliyor...';">
 
             <div class="flex-col gap-2">
                 <label for="title" style="font-size: 0.9rem; color: var(--text-muted);">
-                    Veri Başlığı <span style="color:var(--danger)">*</span> (En az 6 karakter)
+                    Veri Başlığı <span style="color:var(--danger)">*</span> (En az 6 karakter, özel karakter içeremez)
                 </label>
                 <input type="text" id="title" name="title" class="glass-input" minlength="6" required autocomplete="off"
+                    pattern="[a-zA-Z0-9çÇğĞıİöÖşŞüÜ\s]{6,}"
+                    title="Veri başlığı en az 6 karakter olmalı ve özel karakter içermemelidir."
                     placeholder="Veri başlığını giriniz...">
+            </div>
+
+            <div class="flex-col gap-2">
+                <label for="request_note" style="font-size: 0.9rem; color: var(--text-muted);">Talep Açıklaması (İsteğe
+                    Bağlı)</label>
+                <input type="text" id="request_note" name="request_note" class="glass-input" autocomplete="off"
+                    placeholder="Talebiniz varsa buraya yazabilirsiniz...">
             </div>
 
             <div class="flex-col gap-2">
@@ -106,8 +162,10 @@
             </div>
 
             <div class="flex-col gap-2">
-                <label for="file" style="font-size: 0.9rem; color: var(--text-muted);">Veri Dosyası (ZIP vb.)</label>
-                <input type="file" id="file" name="file" class="glass-input" accept=".zip,.rar,.pdf,.csv,.xlsx">
+                <label for="file" style="font-size: 0.9rem; color: var(--text-muted);">Veri Dosyası (Sadece .zip) <span
+                        style="color:var(--danger)">*</span></label>
+                <input type="file" id="file" name="file" class="glass-input" required
+                    accept=".zip,application/zip,application/x-zip-compressed">
             </div>
 
             <button type="submit" class="glass-btn mt-4" style="width: max-content;">Veri Gönder</button>
@@ -116,6 +174,44 @@
     {% endif %}
 
 </div>
+
+{% if current_user.role == 'rootadmin' %}
+<!-- ROOTADMIN TALEP DEĞERLENDİRME POPUP MODALI -->
+<div class="modal-overlay" id="requestModalOverlay">
+    <div class="glass-panel modal-content" style="max-width: 500px;">
+        <button class="modal-close" id="closeRequestModalBtn">&times;</button>
+        <h3 style="margin-bottom: 1rem;">Talep Değerlendirme</h3>
+
+        <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px;" class="flex-col gap-2 mb-4">
+            <div><strong style="color: var(--text-muted);">Veri Başlığı:</strong> <span id="popupDataTitle"></span>
+            </div>
+            <div><strong style="color: var(--text-muted);">Yükleyen Kullanıcı:</strong> <span id="popupDataUser"></span>
+            </div>
+            <div><strong style="color: var(--text-muted);">Talep Notu:</strong> <span id="popupDataRequest"
+                    style="color: var(--primary);"></span></div>
+            <div><strong style="color: var(--text-muted);">Mevcut Durum:</strong> <span id="popupDataStatus"></span>
+            </div>
+        </div>
+
+        <form id="approveRejectForm" method="POST" action="" class="flex-col gap-4">
+            <input type="hidden" name="action" id="requestAction" value="onayla">
+
+            <div class="flex-col gap-2">
+                <label for="reason" style="font-size: 0.9rem; color: var(--text-muted);">Gerekçe <span
+                        style="color:var(--danger)">*</span> (Zorunlu)</label>
+                <textarea id="reason" name="reason" class="glass-input" rows="3" required
+                    placeholder="Onay veya ret gerekçesini giriniz..."></textarea>
+            </div>
+
+            <div class="flex justify-between items-center mt-4">
+                <button type="button" class="glass-btn glass-btn-danger" id="rejectSubmitBtn">✕ Reddet</button>
+                <button type="button" class="glass-btn" id="approveSubmitBtn" style="background: var(--success);">✓
+                    Onayla</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -147,7 +243,7 @@
         });
     }
 
-    // Download Selected Files (indirme route'u üzerinden → durum otomatik güncellenir)
+    // Download Selected Files
     let downloadBtn = document.getElementById('downloadSelectedBtn');
     if (downloadBtn) {
         downloadBtn.addEventListener('click', function () {
@@ -171,6 +267,56 @@
             setTimeout(() => location.reload(), (checkboxes.length * 400) + 1000);
         });
     }
+    {% endif %}
+
+    {% if current_user.role == 'rootadmin' %}
+    // Rootadmin Talep Modal Popup Script
+    const reqModal = document.getElementById('requestModalOverlay');
+    const closeReqBtn = document.getElementById('closeRequestModalBtn');
+    const approveForm = document.getElementById('approveRejectForm');
+    const actionInput = document.getElementById('requestAction');
+    const reasonInput = document.getElementById('reason');
+
+    document.querySelectorAll('.request-popup-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const dataId = this.dataset.id;
+            document.getElementById('popupDataTitle').textContent = this.dataset.title;
+            document.getElementById('popupDataUser').textContent = this.dataset.user;
+            document.getElementById('popupDataRequest').textContent = this.dataset.request;
+            document.getElementById('popupDataStatus').textContent = this.dataset.status.toUpperCase();
+            reasonInput.value = this.dataset.reason || '';
+
+            approveForm.action = '/data/approve_reject/' + dataId;
+            reqModal.classList.add('active');
+        });
+    });
+
+    if (closeReqBtn && reqModal) {
+        closeReqBtn.addEventListener('click', () => reqModal.classList.remove('active'));
+        reqModal.addEventListener('click', (e) => {
+            if (e.target === reqModal) reqModal.classList.remove('active');
+        });
+    }
+
+    document.getElementById('approveSubmitBtn').addEventListener('click', function () {
+        /* if (!reasonInput.value.trim()) {
+             alert('Lütfen bir gerekçe giriniz.');
+             reasonInput.focus();
+             return;
+         }*/
+        actionInput.value = 'onayla';
+        approveForm.submit();
+    });
+
+    document.getElementById('rejectSubmitBtn').addEventListener('click', function () {
+        if (!reasonInput.value.trim()) {
+            alert('Lütfen bir gerekçe giriniz.');
+            reasonInput.focus();
+            return;
+        }
+        actionInput.value = 'reddet';
+        approveForm.submit();
+    });
     {% endif %}
 </script>
 {% endblock %}

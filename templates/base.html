@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>İstatistik Sistemi</title>
+    <title>İstatistik Yükleme Sistemi</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% block head %}{% endblock %}
 </head>
@@ -17,15 +17,16 @@
             <!-- ☰ ÜÇ NOKTA MENÜ BUTONU (EN SOLDA) -->
             <div class="menu-dropdown">
                 <button class="menu-btn" id="menuToggleBtn" title="Menüyü Aç/Kapat">&#8942;</button>
-
                 <div class="menu-content" id="menuDropdown">
+                    {% if current_user.role == 'user' %}
                     <a href="{{ url_for('dashboard') }}"
                         class="{% if request.endpoint == 'dashboard' %}menu-active{% endif %}">
                         🏠 Anasayfa
                     </a>
-
+                    {% endif %}
                     {% if current_user.role in ['admin', 'rootadmin'] %}
-                    <a href="{{ url_for('dashboard') }}">
+                    <a href="{{ url_for('dashboard') }}"
+                        class="{% if request.endpoint == 'dashboard' %}menu-active{% endif %}">
                         📊 Veriler
                     </a>
                     <a href="{{ url_for('statistics') }}"
@@ -46,67 +47,170 @@
             </div>
 
             <div class="logo">
-                <h2>İstatistik Sistemi</h2>
+                <h2>İstatistik Yükleme Sistemi</h2>
             </div>
         </div>
 
         <div class="flex items-center gap-4">
+
+            <!-- 🟢 YEŞİL DAİRE AD KISALTMASI (AVATAR) -->
+            <div class="user-avatar-circle" id="userAvatarBtn" title="Profil & Şifre Değiştir">
+                {{ current_user.initials }}
+            </div>
+
             <span style="color: var(--primary); font-weight: 500;">
-                {{ current_user.username }}
-                <span style="font-size: 0.8rem; opacity: 0.8; text-transform: uppercase;">({{ current_user.role
-                    }})</span>
+                {{ current_user.full_name or current_user.username }}
+
             </span>
+
             <a href="{{ url_for('logout') }}" class="glass-btn glass-btn-danger"
                 style="padding: 6px 12px; font-size: 0.85rem;">Çıkış Yap</a>
         </div>
     </nav>
     {% endif %}
 
-    <main class="container">
+    <!-- 🟢 PROFİL VE ŞİFRE DEĞİŞTİRME MODALI -->
+    <div class="modal-overlay" id="profileModalOverlay">
+        <div class="glass-panel modal-content" style="max-width: 450px;">
+            <button class="modal-close" id="closeProfileModalBtn">&times;</button>
+            <h3 style="margin-bottom: 1rem; color: var(--text-main);">Kullanıcı Profili & Şifre Değiştir</h3>
+
+            <div class="flex-col gap-3 mb-4"
+                style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px;">
+                <div><strong style="color: var(--text-muted); font-size: 0.85rem;">Adı Soyadı:</strong></div>
+                <div style="font-size: 1.1rem; font-weight: 600; color: var(--success);">{{ current_user.full_name or
+                    current_user.username }}</div>
+                <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">Kullanıcı Adı: {{
+                    current_user.username }} | Rol: {{ current_user.role }}</div>
+            </div>
+
+            <form method="POST" action="{{ url_for('change_password') }}" class="flex-col gap-4">
+                <div class="flex-col gap-2">
+                    <label for="profile_password" style="font-size: 0.9rem; color: var(--text-muted);">Yeni Şifre <span
+                            style="color:var(--danger)">*</span></label>
+                    <input type="password" id="profile_password" name="password" class="glass-input" required
+                        minlength="6" pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{6,}"
+                        title="En az 6 karakter, 1 büyük harf, 1 küçük harf, 1 rakam ve 1 özel karakter içermelidir."
+                        placeholder="******">
+                    <small style="font-size: 0.75rem; color: var(--text-muted);">En az 6 karakter, 1 büyük, 1 küçük
+                        harf, 1 rakam, 1 özel karakter</small>
+                </div>
+
+                <div class="flex-col gap-2">
+                    <label for="profile_confirm_password" style="font-size: 0.9rem; color: var(--text-muted);">Yeni
+                        Şifre Tekrar <span style="color:var(--danger)">*</span></label>
+                    <input type="password" id="profile_confirm_password" name="confirm_password" class="glass-input"
+                        required minlength="6" placeholder="******">
+                </div>
+
+                <div class="flex justify-between items-center mt-4">
+                    <button type="button" class="glass-btn glass-btn-danger" id="cancelProfileModalBtn">İptal</button>
+                    <button type="submit" class="glass-btn">Şifreyi Güncelle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 🍞 TOAST BİLDİRİM KAPSAYICISI (SAĞ ÜST KÖŞE) -->
+    <div class="toast-container" id="toastContainer">
+        <!-- 1. Sistem Flash Mesajları -->
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
         {% for category, message in messages %}
-        <div class="alert alert-{{ category }}">
-            {{ message }}
+        <div class="toast-message toast-{{ category }}">
+            <div class="toast-body">
+                {% if category == 'success' %}✓{% else %}⚠️{% endif %} {{ message }}
+            </div>
+            <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
         </div>
         {% endfor %}
         {% endif %}
         {% endwith %}
 
+        <!-- 2. İlk Login / Girişte Çıkan Bildirimler (Siyah Arka Plan & Kırmızı Yazı) -->
+        {% if login_toast_notifications %}
+        {% for notif in login_toast_notifications %}
+        <div class="toast-message toast-notif-black-red">
+            <div class="toast-body">
+                🚨 <strong>Bildirim:</strong> {{ notif.message }}
+            </div>
+            <button class="toast-close" onclick="this.parentElement.remove()" style="color: #ef4444;">&times;</button>
+        </div>
+        {% endfor %}
+        {% endif %}
+    </div>
+
+    <main class="container">
         {% block content %}{% endblock %}
     </main>
 
     {% block scripts %}{% endblock %}
 
-    <!-- MENÜ SCRIPT (her sayfada çalışır) -->
+    <!-- MENÜ VE BİLDİRİM SCRIPT -->
     <script>
         const menuBtn = document.getElementById('menuToggleBtn');
         const menuDropdown = document.getElementById('menuDropdown');
 
         if (menuBtn && menuDropdown) {
-            // ⋮ butonuna tıklayınca menüyü aç/kapat
             menuBtn.addEventListener('click', function (e) {
                 e.stopPropagation();
                 menuDropdown.classList.toggle('show');
                 menuBtn.classList.toggle('open');
             });
-
-            // Menü dışına tıklanınca kapat
             document.addEventListener('click', function (e) {
                 if (!e.target.closest('.menu-dropdown')) {
                     menuDropdown.classList.remove('show');
                     menuBtn.classList.remove('open');
                 }
             });
+        }
 
-            // ESC tuşu ile kapat
-            document.addEventListener('keydown', function (e) {
-                if (e.key === 'Escape') {
-                    menuDropdown.classList.remove('show');
-                    menuBtn.classList.remove('open');
+        // 🔔 Bildirim Dropdown
+        const notifBtn = document.getElementById('notifToggleBtn');
+        const notifDropdown = document.getElementById('notifDropdown');
+        if (notifBtn && notifDropdown) {
+            notifBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                notifDropdown.classList.toggle('show');
+            });
+            document.addEventListener('click', function (e) {
+                if (!e.target.closest('.notif-dropdown')) {
+                    notifDropdown.classList.remove('show');
                 }
             });
         }
+
+        const markAllReadBtn = document.getElementById('markAllReadBtn');
+        if (markAllReadBtn) {
+            markAllReadBtn.addEventListener('click', function () {
+                fetch('/notifications/read_all', { method: 'POST' })
+                    .then(r => r.json())
+                    .then(d => { if (d.success) location.reload(); });
+            });
+        }
+
+        // 🟢 Yeşil Daire Avatar Modal
+        const avatarBtn = document.getElementById('userAvatarBtn');
+        const profileModal = document.getElementById('profileModalOverlay');
+        const closeProfileBtn = document.getElementById('closeProfileModalBtn');
+        const cancelProfileBtn = document.getElementById('cancelProfileModalBtn');
+
+        if (avatarBtn && profileModal) {
+            avatarBtn.addEventListener('click', () => profileModal.classList.add('active'));
+            if (closeProfileBtn) closeProfileBtn.addEventListener('click', () => profileModal.classList.remove('active'));
+            if (cancelProfileBtn) cancelProfileBtn.addEventListener('click', () => profileModal.classList.remove('active'));
+            profileModal.addEventListener('click', (e) => {
+                if (e.target === profileModal) profileModal.classList.remove('active');
+            });
+        }
+
+        // 🍞 Toast Otomatik Kapanma
+        document.querySelectorAll('.toast-message').forEach(toast => {
+            setTimeout(() => {
+                toast.style.animation = 'toastFadeOut 0.4s forwards';
+                setTimeout(() => toast.remove(), 400);
+            }, 4500);
+        });
     </script>
 </body>
 
