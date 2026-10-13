@@ -615,7 +615,7 @@ def upload():
     try:
         curr=conn.execute('''
             INSERT INTO data_entries (user_id, unit_id, sub_unit_id, day, month, year, time, title, note, request_note, file_path, file_hash, approval_status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'onayda')
         ''', (current_user.id, unit_id, sub_unit_id, day, month, year, time_str, title, note, request_note, file_path, file_hash))
         new_data_id = curr.lastrowid
 
