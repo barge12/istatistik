@@ -100,12 +100,27 @@ def init_db():
             time TEXT NOT NULL,
             title TEXT NOT NULL,
             note TEXT,
+            
             file_path TEXT,
             special_auth BOOLEAN DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users (id),
             FOREIGN KEY (unit_id) REFERENCES units (id),
             FOREIGN KEY (sub_unit_id) REFERENCES sub_units (id)
+        )
+    ''')
+
+    # Create notifications table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS notifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            data_id INTEGER,
+            message TEXT NOT NULL,
+            is_read BOOLEAN DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id),
+            FOREIGN KEY (data_id) REFERENCES data_entries (id)
         )
     ''')
 
@@ -124,11 +139,36 @@ def init_db():
     user_cols = [col[1] for col in cursor.fetchall()]
     if 'sub_unit_id' not in user_cols:
         cursor.execute("ALTER TABLE users ADD COLUMN sub_unit_id INTEGER REFERENCES sub_units(id)")
+    if 'full_name' not in user_cols:
+        cursor.execute("ALTER TABLE users ADD COLUMN full_name TEXT")
+    if 'reset_token' not in user_cols:
+        cursor.execute("ALTER TABLE users ADD COLUMN reset_token TEXT")
+    if 'reset_token_expires' not in user_cols:
+        cursor.execute("ALTER TABLE users ADD COLUMN reset_token_expires TIMESTAMP")
 
     cursor.execute("PRAGMA table_info(data_entries)")
     data_cols = [col[1] for col in cursor.fetchall()]
     if 'sub_unit_id' not in data_cols:
         cursor.execute("ALTER TABLE data_entries ADD COLUMN sub_unit_id INTEGER REFERENCES sub_units(id)")
+    if 'request_note' not in data_cols:
+        cursor.execute("ALTER TABLE data_entries ADD COLUMN request_note TEXT")
+    if 'file_hash' not in data_cols:
+        cursor.execute("ALTER TABLE data_entries ADD COLUMN file_hash TEXT")
+    if 'approval_status' not in data_cols:
+        cursor.execute("ALTER TABLE data_entries ADD COLUMN approval_status TEXT DEFAULT 'pending'")
+    if 'rejection_reason' not in data_cols:
+        cursor.execute("ALTER TABLE data_entries ADD COLUMN rejection_reason TEXT")
+    if 'is_active' not in data_cols:
+     cursor.execute("ALTER TABLE data_entries ADD COLUMN is_active BOOLEAN DEFAULT 1")
+    if 'updated_file_path' not in data_cols:
+        cursor.execute("ALTER TABLE data_entries ADD COLUMN updated_file_path TEXT")
+    if 'updated_file_hash' not in data_cols:
+        cursor.execute("ALTER TABLE data_entries ADD COLUMN updated_file_hash TEXT")
+    if 'updated_by' not in data_cols:
+        cursor.execute("ALTER TABLE data_entries ADD COLUMN updated_by TEXT")
+    if 'updated_at' not in data_cols:
+        cursor.execute("ALTER TABLE data_entries ADD COLUMN updated_at TIMESTAMP")
+   
 
     # Insert default rootadmin if not exists
     cursor.execute("SELECT * FROM users WHERE username = ?", ("rootadmin",))
@@ -137,13 +177,17 @@ def init_db():
     if not rootadmin:
         hashed_pw = generate_password_hash("root123")
         cursor.execute('''
-            INSERT INTO users (username, password, email, role, is_active)
-            VALUES (?, ?, ?, ?, ?)
-        ''', ("rootadmin", hashed_pw, "root@admin.com", "rootadmin", True))
+            INSERT INTO users (username, password, email, role, is_active, full_name)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', ("rootadmin", hashed_pw, "root@admin.com", "rootadmin", True, "Root Admin"))
+    else:
+        # Ensure rootadmin full_name is populated
+        if 'full_name' in rootadmin.keys() and not rootadmin['full_name']:
+            cursor.execute("UPDATE users SET full_name = ? WHERE username = ?", ("Root Admin", "rootadmin"))
 
     conn.commit()
     conn.close()
 
 if __name__ == "__main__":
     init_db()
-    print("Database re-initialized and migrated for units is_active column.")
+    print("Database re-initialized and migrated successfully.")
