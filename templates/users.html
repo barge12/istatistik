@@ -41,7 +41,13 @@
                             <span style="color: var(--text-muted);">-</span>
                             {% endif %}
                         </td>
-                        <td>{{ u.unit_name or '-' }}</td>
+                        <td>
+                            {% if u.unit_code %}
+                            <span class="code-tooltip" data-tooltip="{{ u.unit_name }}">{{ u.unit_code }}</span>
+                            {% else %}
+                            <span style="color: var(--text-muted);">-</span>
+                            {% endif %}
+                        </td>
                         <td>
                             {% if u.sub_unit_code %}
                             <span class="code-tooltip" data-tooltip="{{ u.sub_unit_name }}">{{ u.sub_unit_code }}</span>
